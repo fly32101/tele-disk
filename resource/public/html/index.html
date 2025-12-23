@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Tele Disk Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #0f172a;
+      --card: #111827;
+      --accent: #10b981;
+      --muted: #9ca3af;
+      --text: #e5e7eb;
+      --border: #1f2937;
+      --danger: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "PingFang SC", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(16,185,129,0.08), transparent 25%), radial-gradient(circle at 80% 0%, rgba(59,130,246,0.1), transparent 30%), var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    h1,h2,h3 { margin: 0 0 8px; }
+    p { margin: 4px 0; color: var(--muted); }
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+    }
+    label { display: block; font-size: 13px; color: var(--muted); margin-top: 10px; }
+    input, textarea, select {
+      width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #243047;
+      background: #0b1220; color: var(--text); margin-top: 6px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
+      transition: border 0.2s, box-shadow 0.2s, transform 0.1s;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none; border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,0.15);
+      transform: translateY(-1px);
+    }
+    input[type=file] { display: none; }
+    .file-drop {
+      border: 1.5px dashed #243047; border-radius: 12px; padding: 16px; text-align: center;
+      background: rgba(16,185,129,0.05); transition: border 0.2s, background 0.2s;
+    }
+    .file-drop.dragover {
+      border-color: #38bdf8; background: rgba(56,189,248,0.08);
+    }
+    button {
+      cursor: pointer; border: none; border-radius: 10px; padding: 11px 16px; font-weight: 700;
+      background: linear-gradient(135deg, #22c55e, #0ea5e9); color: #0b1220;
+      box-shadow: 0 10px 25px rgba(34,197,94,0.25);
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+    button:hover { transform: translateY(-1px); box-shadow: 0 14px 30px rgba(56,189,248,0.25); }
+    button:active { transform: translateY(0); }
+    button.secondary { background: #1f2937; color: var(--text); box-shadow: none; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border-bottom: 1px solid var(--border); padding: 8px; text-align: left; font-size: 13px; }
+    th { color: var(--muted); font-weight: 600; }
+    code { background: #0b1220; padding: 2px 6px; border-radius: 6px; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--border); color: var(--muted); }
+    .status { color: #10b981; }
+    .danger { color: var(--danger); }
+    .muted { color: var(--muted); font-size: 13px; }
+    .inline-form { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+    a { color: #38bdf8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>Tele Disk 控制台</h1>
+  <p class="muted">登录/注册 → 绑定 Telegram 账号 → 上传文件 → 生成直链</p>
+
+  <div class="grid grid-2" style="margin-top: 12px;">
+    <div class="card">
+      <h2>登录 / 注册</h2>
+      <div class="inline-form">
+        <div style="flex:1; min-width:180px;">
+          <label>用户名</label>
+          <input id="username" placeholder="alice">
+        </div>
+        <div style="flex:1; min-width:180px;">
+          <label>密码</label>
+          <input id="password" type="password" placeholder="Passw0rd!">
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button onclick="register()">注册</button>
+        <button class="secondary" onclick="login()">登录</button>
+        <span class="muted" id="auth-status"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Telegram 账号</h2>
+      <div class="inline-form">
+        <div style="flex:1; min-width:160px;">
+          <label>名称</label>
+          <input id="tg-name" placeholder="mybot">
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <label>Bot Username</label>
+          <input id="tg-username" placeholder="your_bot">
+        </div>
+      </div>
+      <label>Bot Token</label>
+      <input id="tg-token" placeholder="123:ABC...">
+      <div class="inline-form">
+        <div style="flex:1; min-width:160px;">
+          <label>Chat ID</label>
+          <input id="tg-chatid" placeholder="-100xxxxxxxxxx">
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <label>设为默认</label>
+          <select id="tg-default">
+            <option value="true">是</option>
+            <option value="false">否</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:12px;">
+        <button onclick="createAccount()">创建/绑定</button>
+        <button class="secondary" onclick="loadAccounts()">刷新列表</button>
+        <span class="muted" id="tg-status"></span>
+      </div>
+      <div id="tg-list" class="muted" style="margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:16px;">
+    <div class="card">
+      <h2>上传文件</h2>
+      <div id="drop-zone" class="file-drop" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="handleDrop(event)" onclick="document.getElementById('file-input').click()">
+        <p style="margin:0; color: var(--muted);">拖拽文件到此，或点击下方按钮选择</p>
+        <button class="secondary" style="margin-top:10px;" type="button" onclick="document.getElementById('file-input').click(); event.stopPropagation();">选择文件</button>
+      </div>
+      <input type="file" id="file-input" style="margin-top:10px;">
+      <div class="row" style="margin-top:12px;">
+        <button onclick="upload()">上传</button>
+        <span class="muted" id="upload-status"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>用户统计</h2>
+      <div id="stats" class="muted">未加载</div>
+      <button class="secondary" style="margin-top:10px;" onclick="loadStats()">刷新</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="row" style="justify-content: space-between; align-items: center;">
+      <h2>文件列表</h2>
+      <div class="row">
+        <label style="margin:0;">页码</label><input id="page" type="number" value="1" style="width:80px;">
+        <label style="margin:0;">每页</label><input id="page-size" type="number" value="20" style="width:80px;">
+        <button class="secondary" onclick="loadFiles()">刷新</button>
+      </div>
+    </div>
+    <div class="muted" id="files-total">总数: -</div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>文件名</th><th>大小</th><th>MIME</th><th>MD5</th><th>预览/直链</th></tr>
+      </thead>
+      <tbody id="files-body"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const base = '';
+    const statusEl = (id, msg, isErr=false) => {
+      const el = document.getElementById(id);
+      el.textContent = msg || '';
+      el.style.color = isErr ? '#ef4444' : '#9ca3af';
+    };
+    const token = () => localStorage.getItem('token') || '';
+    const setToken = t => { localStorage.setItem('token', t); document.getElementById('auth-status').textContent = t ? '已登录' : ''; };
+    if (token()) statusEl('auth-status', '已登录');
+
+    async function api(path, opts={}) {
+      const headers = opts.headers || {};
+      if (token()) headers['Authorization'] = 'Bearer ' + token();
+      return fetch(base + path, {...opts, headers});
+    }
+
+    async function register() {
+      const body = { username: val('username'), password: val('password') };
+      const res = await fetch(base + '/api/auth/register', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      if (json.code === 0) { setToken(json.data.token); statusEl('auth-status','注册并登录成功'); }
+      else statusEl('auth-status', json.message, true);
+    }
+    async function login() {
+      const body = { username: val('username'), password: val('password') };
+      const res = await fetch(base + '/api/auth/login', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      if (json.code === 0) { setToken(json.data.token); statusEl('auth-status','登录成功'); loadAccounts(); loadStats(); loadFiles(); }
+      else statusEl('auth-status', json.message, true);
+    }
+    function val(id){ return document.getElementById(id).value.trim(); }
+
+    async function createAccount() {
+      statusEl('tg-status','');
+      const body = {
+        name: val('tg-name') || 'default',
+        bot_username: val('tg-username'),
+        bot_token: val('tg-token'),
+        chat_id: Number(val('tg-chatid')),
+        is_default: document.getElementById('tg-default').value === 'true',
+        status: 1,
+      };
+      const res = await api('/api/telegram/accounts', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.code === 0) { statusEl('tg-status','创建成功'); loadAccounts(); }
+      else statusEl('tg-status', json.message, true);
+    }
+    async function loadAccounts() {
+      const res = await api('/api/telegram/accounts');
+      const json = await res.json();
+      if (json.code !== 0) { statusEl('tg-status', json.message, true); return; }
+      const list = json.data.accounts || [];
+      const el = document.getElementById('tg-list');
+      if (!list.length) { el.textContent = '暂无账号'; return; }
+      el.innerHTML = list.map(a => `<div class="row" style="justify-content:space-between;border-bottom:1px solid var(--border);padding:6px 0;">
+        <span>${a.name} / @${a.bot_username} ${a.is_default ? '<span class="pill status">默认</span>' : ''}</span>
+        <span class="muted">chat_id: ${a.chat_id || '-'}</span>
+      </div>`).join('');
+    }
+
+    async function upload() {
+      statusEl('upload-status','');
+      const file = document.getElementById('file-input').files[0];
+      if (!file) { statusEl('upload-status','请选择文件',true); return; }
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await api('/api/files/upload', { method:'POST', body: fd });
+      const json = await res.json();
+      if (json.code === 0) {
+        statusEl('upload-status', `上传成功，直链: ${json.data.proxy_url}`);
+        loadFiles();
+      } else {
+        statusEl('upload-status', json.message, true);
+      }
+    }
+
+    // 显示选择的文件名
+    document.getElementById('file-input').addEventListener('change', e => {
+      const f = e.target.files[0];
+      statusEl('upload-status', f ? `已选择 ${f.name}` : '');
+    });
+
+    async function loadStats() {
+      const res = await api('/api/files/stats');
+      const json = await res.json();
+      if (json.code !== 0) { document.getElementById('stats').textContent = json.message; return; }
+      const d = json.data;
+      document.getElementById('stats').innerHTML = `已用 ${fmtSize(d.used_bytes)} / 配额 ${d.quota_bytes === 0 ? '不限' : fmtSize(d.quota_bytes)}，文件数 ${d.file_count}`;
+    }
+
+    async function loadFiles() {
+      const page = Number(val('page')) || 1;
+      const pageSize = Number(val('page-size')) || 20;
+      const res = await api(`/api/files?page=${page}&page_size=${pageSize}`);
+      const json = await res.json();
+      if (json.code !== 0) { statusEl('upload-status', json.message, true); return; }
+      document.getElementById('files-total').textContent = `总数: ${json.data.total}`;
+      const tbody = document.getElementById('files-body');
+      tbody.innerHTML = (json.data.files || []).map(f => {
+        const preview = buildPreview(f);
+        return `
+        <tr>
+          <td>${f.id}</td>
+          <td>${f.file_name}</td>
+          <td>${fmtSize(f.size_bytes)}</td>
+          <td>${f.mime_type || '-'}</td>
+          <td><code>${f.md5 || ''}</code></td>
+          <td>${preview}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function buildPreview(f) {
+      const url = f.proxy_url;
+      const mime = (f.mime_type || '').toLowerCase();
+      if (mime.startsWith('image/')) {
+        return `<a href="${url}" target="_blank"><img src="${url}" alt="thumb" style="max-height:60px;max-width:120px;border:1px solid var(--border);border-radius:6px;"></a>`;
+      }
+      if (mime.startsWith('video/')) {
+        return `<video src="${url}" controls style="max-width:160px; max-height:90px;"></video>`;
+      }
+      if (mime.startsWith('audio/')) {
+        return `<audio src="${url}" controls></audio>`;
+      }
+      if (mime === 'application/pdf' || mime.startsWith('text/')) {
+        return `<a href="${url}" target="_blank">预览</a>`;
+      }
+      return `<a href="${url}" target="_blank">下载</a>`;
+    }
+
+    function fmtSize(bytes) {
+      if (!bytes) return '0B';
+      const u = ['B','KB','MB','GB','TB'];
+      let i=0, b=bytes;
+      while (b>=1024 && i<u.length-1) { b/=1024; i++; }
+      return b.toFixed(1) + u[i];
+    }
+
+    // Drag & Drop
+    const dropZone = document.getElementById('drop-zone');
+    function dragOver(e){ e.preventDefault(); dropZone.classList.add('dragover'); }
+    function dragLeave(e){ e.preventDefault(); dropZone.classList.remove('dragover'); }
+    function handleDrop(e){
+      e.preventDefault(); dropZone.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      if (files && files.length>0){
+        document.getElementById('file-input').files = files;
+        statusEl('upload-status', `已选择 ${files[0].name}`);
+      }
+    }
+  </script>
+</body>
+</html>
