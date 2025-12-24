@@ -31,9 +31,10 @@ type apiResponse struct {
 }
 
 type telegramMessage struct {
-	MessageID int          `json:"message_id"`
-	Chat      telegramChat `json:"chat"`
-	Document  *telegramDoc `json:"document,omitempty"`
+	MessageID int            `json:"message_id"`
+	Chat      telegramChat   `json:"chat"`
+	Document  *telegramDoc   `json:"document,omitempty"`
+	Video     *telegramVideo `json:"video,omitempty"`
 }
 
 type telegramChat struct {
@@ -41,6 +42,14 @@ type telegramChat struct {
 }
 
 type telegramDoc struct {
+	FileID       string `json:"file_id"`
+	FileUniqueID string `json:"file_unique_id"`
+	FileName     string `json:"file_name,omitempty"`
+	MimeType     string `json:"mime_type,omitempty"`
+	FileSize     int64  `json:"file_size,omitempty"`
+}
+
+type telegramVideo struct {
 	FileID       string `json:"file_id"`
 	FileUniqueID string `json:"file_unique_id"`
 	FileName     string `json:"file_name,omitempty"`
@@ -163,15 +172,33 @@ func SendDocument(ctx context.Context, account *entity.TelegramAccounts, filenam
 	if err := json.Unmarshal(apiResp.Result, &msg); err != nil {
 		return nil, err
 	}
-	if msg.Document == nil || msg.Document.FileID == "" {
-		return nil, gerror.New("telegram response missing document")
+	docFileID := ""
+	docUniqueID := ""
+	docFileName := ""
+	docMime := ""
+	docSize := int64(0)
+	switch {
+	case msg.Document != nil && msg.Document.FileID != "":
+		docFileID = msg.Document.FileID
+		docUniqueID = msg.Document.FileUniqueID
+		docFileName = msg.Document.FileName
+		docMime = msg.Document.MimeType
+		docSize = msg.Document.FileSize
+	case msg.Video != nil && msg.Video.FileID != "":
+		docFileID = msg.Video.FileID
+		docUniqueID = msg.Video.FileUniqueID
+		docFileName = msg.Video.FileName
+		docMime = msg.Video.MimeType
+		docSize = msg.Video.FileSize
+	default:
+		return nil, gerror.New("telegram response missing document/video")
 	}
 	return &UploadResult{
-		FileID:       msg.Document.FileID,
-		FileUniqueID: msg.Document.FileUniqueID,
-		FileName:     msg.Document.FileName,
-		MimeType:     msg.Document.MimeType,
-		FileSize:     msg.Document.FileSize,
+		FileID:       docFileID,
+		FileUniqueID: docUniqueID,
+		FileName:     docFileName,
+		MimeType:     docMime,
+		FileSize:     docSize,
 		MessageID:    int64(msg.MessageID),
 		ChatID:       msg.Chat.ID,
 	}, nil
